@@ -43,6 +43,23 @@ impl<'a> Lexer<'a> {
             '}' => Token::CloseBrace,
             ';' => Token::Semicolon,
 
+            // Operators
+            '+' => Token::Plus,
+            '-' => Token::Minus,
+            '*' => Token::Asterix,
+            '/' => {
+                // Check if it is a comment
+                if let Some(&'/') = self.buffer.peek() {
+                    self.buffer.next(); // Consume the second '/'
+                    self.consume_comment();
+
+                    // Get the next token (recursive call)
+                    self.next_token()
+                } else {
+                    Token::Slash
+                }
+            }
+
             // Keyword or identifier
             ch if ch.is_alphabetic() || ch == '_' => self.read_keyword_or_identifier(ch),
 
@@ -95,6 +112,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Consumes whitespace
     fn consume_whitespace(&mut self) {
         while let Some(ch) = self.buffer.peek() {
             if ch.is_whitespace() {
@@ -102,6 +120,16 @@ impl<'a> Lexer<'a> {
             } else {
                 break;
             }
+        }
+    }
+
+    /// Consumes single line comment
+    fn consume_comment(&mut self) {
+        while let Some(ch) = self.buffer.peek() {
+            if *ch == '\n' {
+                break;
+            }
+            self.buffer.next();
         }
     }
 }
@@ -166,6 +194,44 @@ mod tests {
     fn test_lexer_empty_input() {
         let input = "";
         let mut lexer = Lexer::new(input);
+        assert_eq!(lexer.next_token(), Token::EOF);
+    }
+
+    #[test]
+    fn test_lexer_comment() {
+        let input = "// A comment \n int main ( void ) { \t return 2 ; }";
+        let mut lexer = Lexer::new(input);
+
+        assert_eq!(lexer.next_token(), Token::Int);
+        assert_eq!(lexer.next_token(), Token::Identifier("main".to_string()));
+        assert_eq!(lexer.next_token(), Token::OpenParen);
+        assert_eq!(lexer.next_token(), Token::Void);
+        assert_eq!(lexer.next_token(), Token::CloseParen);
+        assert_eq!(lexer.next_token(), Token::OpenBrace);
+        assert_eq!(lexer.next_token(), Token::Return);
+        assert_eq!(lexer.next_token(), Token::IntegerLiteral(2));
+        assert_eq!(lexer.next_token(), Token::Semicolon);
+        assert_eq!(lexer.next_token(), Token::CloseBrace);
+        assert_eq!(lexer.next_token(), Token::EOF);
+    }
+
+    #[test]
+    fn test_lexer_division() {
+        let input = "int main(void) { return 2 / 5; }";
+        let mut lexer = Lexer::new(input);
+
+        assert_eq!(lexer.next_token(), Token::Int);
+        assert_eq!(lexer.next_token(), Token::Identifier("main".to_string()));
+        assert_eq!(lexer.next_token(), Token::OpenParen);
+        assert_eq!(lexer.next_token(), Token::Void);
+        assert_eq!(lexer.next_token(), Token::CloseParen);
+        assert_eq!(lexer.next_token(), Token::OpenBrace);
+        assert_eq!(lexer.next_token(), Token::Return);
+        assert_eq!(lexer.next_token(), Token::IntegerLiteral(2));
+        assert_eq!(lexer.next_token(), Token::Slash);
+        assert_eq!(lexer.next_token(), Token::IntegerLiteral(5));
+        assert_eq!(lexer.next_token(), Token::Semicolon);
+        assert_eq!(lexer.next_token(), Token::CloseBrace);
         assert_eq!(lexer.next_token(), Token::EOF);
     }
 }
