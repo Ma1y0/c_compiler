@@ -12,7 +12,7 @@ pub enum Token {
     IntegerLiteral(u64),
     CharacterLiteral(char), // 'x'
 
-    // Punctuators
+    // Punctuation
     OpenParen,  // (
     CloseParen, // )
     OpenBrace,  // {
