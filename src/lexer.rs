@@ -49,14 +49,23 @@ impl<'a> Lexer<'a> {
             '*' => Token::Asterix,
             '/' => {
                 // Check if it is a comment
-                if let Some(&'/') = self.buffer.peek() {
-                    self.buffer.next(); // Consume the second '/'
-                    self.consume_comment();
+                match self.buffer.peek() {
+                    Some('/') => {
+                        self.buffer.next(); // Consume the second '/'
+                        self.consume_comment();
 
-                    // Get the next token (recursive call)
-                    self.next_token()
-                } else {
-                    Token::Slash
+                        // Get the next token (recursive call)
+                        self.next_token()
+                    }
+                    Some('*') => {
+                        self.buffer.next(); // Consume '*'
+                        match self.consume_multi_line_comment() {
+                            Ok(()) => self.next_token(),
+                            Err(err) => Token::Error(err),
+                        }
+                    }
+
+                    _ => Token::Slash,
                 }
             }
 
@@ -131,6 +140,20 @@ impl<'a> Lexer<'a> {
             }
             self.buffer.next();
         }
+    }
+
+    /// Consumes multi line comment
+    fn consume_multi_line_comment(&mut self) -> Result<(), String> {
+        while let Some(ch) = self.buffer.next() {
+            if ch == '*' {
+                if let Some('/') = self.buffer.peek() {
+                    self.buffer.next(); // Consume the '/' as the end
+                    return Ok(());
+                }
+            }
+        }
+
+        Err("Unterminated multi-line comment".to_string())
     }
 }
 
@@ -230,6 +253,24 @@ mod tests {
         assert_eq!(lexer.next_token(), Token::IntegerLiteral(2));
         assert_eq!(lexer.next_token(), Token::Slash);
         assert_eq!(lexer.next_token(), Token::IntegerLiteral(5));
+        assert_eq!(lexer.next_token(), Token::Semicolon);
+        assert_eq!(lexer.next_token(), Token::CloseBrace);
+        assert_eq!(lexer.next_token(), Token::EOF);
+    }
+
+    #[test]
+    fn test_lexer_multi_line_comment() {
+        let input = "/* This a a comment. Bla Bla \n Bla fwaiooja koawf \n lkdalw */ int main(void) { return 2; }";
+        let mut lexer = Lexer::new(input);
+
+        assert_eq!(lexer.next_token(), Token::Int);
+        assert_eq!(lexer.next_token(), Token::Identifier("main".to_string()));
+        assert_eq!(lexer.next_token(), Token::OpenParen);
+        assert_eq!(lexer.next_token(), Token::Void);
+        assert_eq!(lexer.next_token(), Token::CloseParen);
+        assert_eq!(lexer.next_token(), Token::OpenBrace);
+        assert_eq!(lexer.next_token(), Token::Return);
+        assert_eq!(lexer.next_token(), Token::IntegerLiteral(2));
         assert_eq!(lexer.next_token(), Token::Semicolon);
         assert_eq!(lexer.next_token(), Token::CloseBrace);
         assert_eq!(lexer.next_token(), Token::EOF);
