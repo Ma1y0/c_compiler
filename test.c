@@ -1,4 +1,1 @@
-int main(void) {
-  // Hello
-  return 2;
-}
+int main(void) { return 2;}

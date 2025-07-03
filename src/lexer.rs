@@ -112,7 +112,7 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        match literal.parse::<u64>() {
+        match literal.parse() {
             Ok(num) => Token::IntegerLiteral(num),
             Err(e) => Token::Error(format!(
                 "Invalid integer literal: '{}', with: {}",

@@ -9,7 +9,7 @@ pub enum Token {
     Identifier(String),
 
     // Literals
-    IntegerLiteral(u64),
+    IntegerLiteral(i64),
     CharacterLiteral(char), // 'x'
 
     // Punctuation
