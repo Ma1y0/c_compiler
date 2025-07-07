@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf, process::ExitCode};
 
-use c_compiler::{Token, lexer::Lexer};
+use c_compiler::{Parser as CParser, Token, lexer::Lexer};
 use clap::Parser;
 
 #[derive(Parser)]
@@ -45,6 +45,12 @@ fn main() -> Result<(), ExitCode> {
             // Return a non-zero exit code to signal failure
             return Err(ExitCode::from(1));
         }
+    } else if args.parse {
+        let mut lexer = Lexer::new(&src);
+        let mut parser = CParser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        println!("{:?}", program);
     }
 
     return Ok(());

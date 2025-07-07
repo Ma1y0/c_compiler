@@ -1,3 +1,5 @@
+use crate::Token;
+
 /// Node of the AST `Program` should always be at the top
 #[derive(Debug, PartialEq)]
 pub enum Node {
@@ -8,12 +10,12 @@ pub enum Node {
 
 #[derive(Debug, PartialEq)]
 pub struct Program {
-    pub functions: Vec<Function>,
+    pub statements: Vec<Statement>,
 }
 
 impl Program {
-    pub fn new(functions: Vec<Function>) -> Self {
-        Self { functions }
+    pub fn new(statements: Vec<Statement>) -> Self {
+        Self { statements }
     }
 }
 
@@ -22,7 +24,7 @@ impl Program {
 pub struct Function {
     return_type: Type,
     name: String,
-    parameters: Vec<Parameter>,
+    parameters: Vec<FnParameter>,
     body: Vec<Statement>,
 }
 
@@ -30,7 +32,7 @@ impl Function {
     pub fn new(
         return_type: Type,
         name: String,
-        parameters: Vec<Parameter>,
+        parameters: Vec<FnParameter>,
         body: Vec<Statement>,
     ) -> Self {
         Self {
@@ -44,7 +46,7 @@ impl Function {
 
 /// Function parameters
 #[derive(Debug, PartialEq)]
-pub struct Parameter {
+pub struct FnParameter {
     param_type: Type,
     name: String,
 }
@@ -56,9 +58,22 @@ pub enum Type {
     Int,
 }
 
+impl TryFrom<Token> for Type {
+    type Error = &'static str;
+
+    fn try_from(value: Token) -> Result<Self, Self::Error> {
+        match value {
+            Token::Int => Ok(Type::Int),
+            Token::Void => Ok(Type::Void),
+            _ => Err("Invalid type"),
+        }
+    }
+}
+
 /// Statement
 #[derive(Debug, PartialEq)]
 pub enum Statement {
+    Function(Function),
     Return(Expression),
 }
 
@@ -70,5 +85,5 @@ pub enum Expression {
 
 #[derive(Debug, PartialEq)]
 pub enum Literal {
-    Int(i64),
+    Integer(i64),
 }
