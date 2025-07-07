@@ -68,6 +68,14 @@ impl<'a> Lexer<'a> {
                     _ => Token::Slash,
                 }
             }
+            '=' => {
+                if let Some('=') = self.buffer.peek() {
+                    self.buffer.next(); // Consume the second `=`
+                    Token::Equal
+                } else {
+                    Token::Assignmen
+                }
+            }
 
             // Keyword or identifier
             ch if ch.is_alphabetic() || ch == '_' => self.read_keyword_or_identifier(ch),
@@ -273,6 +281,21 @@ mod tests {
         assert_eq!(lexer.next_token(), Token::IntegerLiteral(2));
         assert_eq!(lexer.next_token(), Token::Semicolon);
         assert_eq!(lexer.next_token(), Token::CloseBrace);
+        assert_eq!(lexer.next_token(), Token::EOF);
+    }
+
+    #[test]
+    fn test_lexer_assignment_and_equality() {
+        let input = "int x = 5 == 5;";
+        let mut lexer = Lexer::new(input);
+
+        assert_eq!(lexer.next_token(), Token::Int);
+        assert_eq!(lexer.next_token(), Token::Identifier("x".to_string()));
+        assert_eq!(lexer.next_token(), Token::Assignmen);
+        assert_eq!(lexer.next_token(), Token::IntegerLiteral(5));
+        assert_eq!(lexer.next_token(), Token::Equal);
+        assert_eq!(lexer.next_token(), Token::IntegerLiteral(5));
+        assert_eq!(lexer.next_token(), Token::Semicolon);
         assert_eq!(lexer.next_token(), Token::EOF);
     }
 }

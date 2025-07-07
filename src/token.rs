@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     // Keywords
     Int,
@@ -21,10 +21,12 @@ pub enum Token {
     Colon,      // :
 
     // Operators
-    Plus,    // +
-    Minus,   // -
-    Asterix, // *
-    Slash,   // /
+    Plus,      // +
+    Minus,     // -
+    Asterix,   // *
+    Slash,     // /
+    Assignmen, // =
+    Equal,     // ==
 
     // Utils
     Error(String),
