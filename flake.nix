@@ -15,6 +15,7 @@
 	  gcc
 	  gdb
 	  gnumake
+	  clang-tools
 	  cargo
 	  rustc
 	  rustfmt
