@@ -50,7 +50,6 @@ impl<'a> Parser<'a> {
 
         while self.token != Token::EOF {
             declarations.push(self.parse_declaration()?);
-            // self.next_token();
         }
 
         Ok(TranslationUnit { declarations })
@@ -106,14 +105,13 @@ impl<'a> Parser<'a> {
 
     fn parse_body(&mut self) -> ParserResult<Vec<Statement>> {
         self.next_token(); // Consume the '{'
-        // Consume the args
+        let mut statements = Vec::new();
         while self.token != Token::CloseBrace {
-            self.next_token();
+            statements.push(self.parse_statement()?);
         }
         self.next_token(); // Consume the '}'
 
-        // TODO: Parse function body
-        Ok(Vec::new())
+        Ok(statements)
     }
 
     fn parse_variable_declaration(
@@ -153,6 +151,23 @@ impl<'a> Parser<'a> {
 
         return Ok(left_expr);
     }
+
+    fn parse_statement(&mut self) -> ParserResult<Statement> {
+        let statement = match self.token {
+            Token::Return => self.parse_return_statement()?,
+            Token::Int => unimplemented!("Var declaration"),
+            _ => unimplemented!("Statement"),
+        };
+
+        Ok(statement)
+    }
+
+    fn parse_return_statement(&mut self) -> ParserResult<Statement> {
+        self.next_token(); // Consume the `return` keyword
+        let expression = self.parse_expresssion()?;
+
+        Ok(Statement::Return(expression))
+    }
 }
 
 #[cfg(test)]
@@ -162,6 +177,7 @@ mod tests {
         CType, Declaration, Expression, FnParameter, FunctionDeclaration, Statement,
         VariableDeclaration,
     };
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_parser_parse_simple_main_function() {
@@ -170,7 +186,7 @@ mod tests {
 
         let expected = TranslationUnit {
             declarations: vec![Declaration::Function(FunctionDeclaration::new(
-                CType::Void,
+                CType::Int,
                 "main".to_string(),
                 vec![FnParameter::new(CType::Void, "".to_string())],
                 Some(vec![Statement::Return(Expression::IntegerLiteral(0))]),
@@ -197,7 +213,7 @@ mod tests {
                     CType::Void,
                     "main".to_string(),
                     vec![FnParameter::new(CType::Void, "".to_string())],
-                    Some(vec![]),
+                    Some(vec![Statement::Return(Expression::IntegerLiteral(0))]),
                 )),
             ],
         };
