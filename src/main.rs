@@ -43,11 +43,17 @@ fn main() -> Result<(), ExitCode> {
 
         if has_lexing_errors {
             // Return a non-zero exit code to signal failure
-            return Err(ExitCode::from(1));
+            return Err(ExitCode::FAILURE);
         }
     } else if args.parse {
         let program = parse(&src);
-        println!("{:?}", program);
+        match program {
+            Ok(a) => println!("{:?}", a),
+            Err(e) => {
+                eprintln!("{}", e);
+                return Err(ExitCode::FAILURE);
+            }
+        }
     }
 
     Ok(())

@@ -3,11 +3,9 @@
 int main(void) {
   std::println("Hello World");
 
-  if (5 < 9) {
-    int a = 56;
-    std::println("Is indeed is");
-  }
+  int a = 6;
+  std::println("Ok: {}", a = 17);
+  a = 6 = 8 = 56 = 13;
 
-  int b = a + 6;
   return 0;
 }

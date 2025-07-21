@@ -16,6 +16,7 @@
 	  gdb
 	  gnumake
 	  clang-tools
+	  clang_20
 	  cargo
 	  rustc
 	  rustfmt

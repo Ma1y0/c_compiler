@@ -1,5 +1,6 @@
 mod ast;
 mod error;
+mod precedence;
 
 use crate::{
     Token,
@@ -140,6 +141,7 @@ impl<'a> Parser<'a> {
 
     fn parse_expresssion(&mut self) -> ParserResult<Expression> {
         let left_expr = match self.token {
+            Token::Minus | Token::Plus => self.parse_prefix_expression()?,
             Token::IntegerLiteral(a) => Expression::IntegerLiteral(a),
             _ => unimplemented!("Expression: {:?}", self.token.clone()),
         };
@@ -150,6 +152,10 @@ impl<'a> Parser<'a> {
         self.next_token(); // Consume the `;`
 
         return Ok(left_expr);
+    }
+
+    fn parse_prefix_expression(&mut self) -> ParserResult<Expression> {
+        unimplemented!("Prefix")
     }
 
     fn parse_statement(&mut self) -> ParserResult<Statement> {
@@ -220,5 +226,28 @@ mod tests {
 
         // tests
         assert_eq!(expected, ast);
+    }
+
+    #[test]
+    fn test_parser_parse_prefix_expression() {
+        let src = "int a = +5; int b = -6;";
+        let ast = parse(src).unwrap();
+
+        let expected = TranslationUnit {
+            declarations: vec![
+                Declaration::Variable(VariableDeclaration::new(
+                    CType::Int,
+                    "a".to_string(),
+                    Some(Expression::IntegerLiteral(5)),
+                )),
+                Declaration::Variable(VariableDeclaration::new(
+                    CType::Int,
+                    "b".to_string(),
+                    Some(Expression::IntegerLiteral(-6)),
+                )),
+            ],
+        };
+
+        assert_eq!(expected, ast)
     }
 }

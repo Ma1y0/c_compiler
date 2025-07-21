@@ -29,15 +29,32 @@ impl TryFrom<&Token> for CType {
 #[derive(Debug, PartialEq)]
 pub enum Expression {
     IntegerLiteral(i64),
-    /// e.g., `main`, 'my_func'
     Identifier(String),
+    BinaryOp(Box<BinaryOp>),
+    Unary(Box<Unary>),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Unary {
+    Positive(Expression),
+    Negative(Expression),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum BinaryOp {
+    Add(Expression, Expression),
+    Subtract(Expression, Expression),
+    Multiply(Expression, Expression),
+    Divide(Expression, Expression),
+    Equals(Expression, Expression),
+    NotEquals(Expression, Expression),
+    Assign(Expression, Expression),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Statement {
     Declaration(VariableDeclaration),
-    /// e.g., `5 + 6;`, `my_func();`
-    ExpressionStatment(Expression),
+    ExpressionStatment(Expression), // e.g., `5 + 6;`, `my_func();`
     Return(Expression),
 }
 
