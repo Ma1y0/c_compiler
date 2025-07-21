@@ -7,10 +7,11 @@ use crate::{
     lexer::Lexer,
     parser::{
         ast::{
-            CType, Declaration, Expression, FnParameter, FunctionDeclaration, Statement,
-            TranslationUnit, VariableDeclaration,
+            BinaryOp, CType, Declaration, Expression, FnParameter, FunctionDeclaration, Statement,
+            TranslationUnit, Unary, VariableDeclaration,
         },
         error::{ParserError, ParserResult},
+        precedence::Precedence,
     },
 };
 
@@ -68,7 +69,7 @@ impl<'a> Parser<'a> {
         self.next_token(); // Consume the identifier
 
         match self.token {
-            Token::Assignmen | Token::Semicolon => {
+            Token::Assignment | Token::Semicolon => {
                 self.parse_variable_declaration(ctype, identifier)
             }
             Token::OpenParen => self.parse_function_declaration(ctype, identifier),
@@ -124,12 +125,12 @@ impl<'a> Parser<'a> {
             Token::Semicolon => Ok(Declaration::Variable(VariableDeclaration::new(
                 ctype, name, None,
             ))),
-            Token::Assignmen => {
+            Token::Assignment => {
                 self.next_token(); // Consume the `=`
                 Ok(Declaration::Variable(VariableDeclaration::new(
                     ctype,
                     name,
-                    Some(self.parse_expresssion()?),
+                    Some(self.parse_expresssion(Precedence::Lowest)?),
                 )))
             }
             _ => Err(ParserError::Expected(
@@ -139,29 +140,88 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_expresssion(&mut self) -> ParserResult<Expression> {
-        let left_expr = match self.token {
-            Token::Minus | Token::Plus => self.parse_prefix_expression()?,
-            Token::IntegerLiteral(a) => Expression::IntegerLiteral(a),
-            _ => unimplemented!("Expression: {:?}", self.token.clone()),
-        };
+    fn parse_expresssion(&mut self, precedence: Precedence) -> ParserResult<Expression> {
+        let mut left = self.parse_prefix_expression()?;
 
-        while self.token != Token::Semicolon {
+        // Parse infix operators while they have higher precedence
+        while self.token != Token::Semicolon
+            && self.token != Token::CloseParen
+            && self.token != Token::CloseBrace
+            && precedence < Precedence::from(&self.token)
+        {
+            left = self.parse_infix_expression(left)?;
+        }
+
+        dbg!(&self.token);
+        if self.token == Token::Semicolon {
             self.next_token();
         }
-        self.next_token(); // Consume the `;`
 
-        return Ok(left_expr);
+        Ok(left)
     }
 
     fn parse_prefix_expression(&mut self) -> ParserResult<Expression> {
-        unimplemented!("Prefix")
+        match &self.token {
+            Token::IntegerLiteral(value) => {
+                let value = *value;
+                self.next_token();
+                Ok(Expression::IntegerLiteral(value))
+            }
+            Token::Identifier(name) => {
+                let name = name.clone();
+                self.next_token();
+                Ok(Expression::Identifier(name))
+            }
+            Token::Plus => {
+                self.next_token(); // Consume '+'
+                let expr = self.parse_expresssion(Precedence::Unary)?;
+                Ok(Expression::Unary(Box::new(Unary::Positive(expr))))
+            }
+            Token::Minus => {
+                self.next_token(); // Consume '-'
+                let expr = self.parse_expresssion(Precedence::Unary)?;
+                Ok(Expression::Unary(Box::new(Unary::Negative(expr))))
+            }
+            Token::OpenParen => {
+                self.next_token(); // Consume '('
+                let expr = self.parse_expresssion(Precedence::Lowest)?;
+                if self.token != Token::CloseParen {
+                    return Err(ParserError::Expected(
+                        "closing parenthesis",
+                        self.token.clone(),
+                    ));
+                }
+                self.next_token(); // Consume ')'
+                Ok(expr)
+            }
+            _ => Err(ParserError::Expected("expression", self.token.clone())),
+        }
+    }
+
+    fn parse_infix_expression(&mut self, left: Expression) -> ParserResult<Expression> {
+        let operator = self.token.clone();
+        let precedence = Precedence::from(&operator);
+        self.next_token(); // Consume the operator
+
+        let right = self.parse_expresssion(precedence)?;
+
+        let binary_op = match operator {
+            Token::Plus => BinaryOp::Add(left, right),
+            Token::Minus => BinaryOp::Subtract(left, right),
+            Token::Asterix => BinaryOp::Multiply(left, right),
+            Token::Slash => BinaryOp::Divide(left, right),
+            Token::Equal => BinaryOp::Equals(left, right),
+            Token::Assignment => BinaryOp::Assign(left, right),
+            _ => return Err(ParserError::Expected("binary operator", operator)),
+        };
+
+        Ok(Expression::BinaryOp(Box::new(binary_op)))
     }
 
     fn parse_statement(&mut self) -> ParserResult<Statement> {
         let statement = match self.token {
             Token::Return => self.parse_return_statement()?,
-            Token::Int => unimplemented!("Var declaration"),
+            Token::Int => unimplemented!("Var statement"),
             _ => unimplemented!("Statement"),
         };
 
@@ -170,7 +230,7 @@ impl<'a> Parser<'a> {
 
     fn parse_return_statement(&mut self) -> ParserResult<Statement> {
         self.next_token(); // Consume the `return` keyword
-        let expression = self.parse_expresssion()?;
+        let expression = self.parse_expresssion(Precedence::Lowest)?;
 
         Ok(Statement::Return(expression))
     }
@@ -238,16 +298,92 @@ mod tests {
                 Declaration::Variable(VariableDeclaration::new(
                     CType::Int,
                     "a".to_string(),
-                    Some(Expression::IntegerLiteral(5)),
+                    Some(Expression::Unary(Box::new(Unary::Positive(
+                        Expression::IntegerLiteral(5),
+                    )))),
                 )),
                 Declaration::Variable(VariableDeclaration::new(
                     CType::Int,
                     "b".to_string(),
-                    Some(Expression::IntegerLiteral(-6)),
+                    Some(Expression::Unary(Box::new(Unary::Negative(
+                        Expression::IntegerLiteral(6),
+                    )))),
                 )),
             ],
         };
 
-        assert_eq!(expected, ast)
+        assert_eq!(expected, ast);
+    }
+
+    #[test]
+    fn test_parser_parse_binary_expression() {
+        let src = "int a = 2 + 3 * 4;";
+        let ast = parse(src).unwrap();
+
+        // Should parse as 2 + (3 * 4) due to precedence
+        let expected = TranslationUnit {
+            declarations: vec![Declaration::Variable(VariableDeclaration::new(
+                CType::Int,
+                "a".to_string(),
+                Some(Expression::BinaryOp(Box::new(BinaryOp::Add(
+                    Expression::IntegerLiteral(2),
+                    Expression::BinaryOp(Box::new(BinaryOp::Multiply(
+                        Expression::IntegerLiteral(3),
+                        Expression::IntegerLiteral(4),
+                    ))),
+                )))),
+            ))],
+        };
+
+        assert_eq!(expected, ast);
+    }
+
+    #[test]
+    fn test_parser_parse_parenthesized_expression() {
+        let src = "int a = (2 + 3) * 4;";
+        let ast = parse(src).unwrap();
+
+        // Should parse as (2 + 3) * 4
+        let expected = TranslationUnit {
+            declarations: vec![Declaration::Variable(VariableDeclaration::new(
+                CType::Int,
+                "a".to_string(),
+                Some(Expression::BinaryOp(Box::new(BinaryOp::Multiply(
+                    Expression::BinaryOp(Box::new(BinaryOp::Add(
+                        Expression::IntegerLiteral(2),
+                        Expression::IntegerLiteral(3),
+                    ))),
+                    Expression::IntegerLiteral(4),
+                )))),
+            ))],
+        };
+
+        assert_eq!(expected, ast);
+    }
+
+    #[test]
+    fn test_parser_complex_expression() {
+        let src = "int result = -5 + 3 * 2 - 1;";
+        let ast = parse(src).unwrap();
+
+        // Should parse as (-5) + (3 * 2) - 1
+        let expected = TranslationUnit {
+            declarations: vec![Declaration::Variable(VariableDeclaration::new(
+                CType::Int,
+                "result".to_string(),
+                Some(Expression::BinaryOp(Box::new(BinaryOp::Subtract(
+                    Expression::BinaryOp(Box::new(BinaryOp::Add(
+                        Expression::Unary(Box::new(Unary::Negative(Expression::IntegerLiteral(5)))),
+                        Expression::BinaryOp(Box::new(BinaryOp::Multiply(
+                            Expression::IntegerLiteral(3),
+                            Expression::IntegerLiteral(2),
+                        ))),
+                    ))),
+                    Expression::IntegerLiteral(1),
+                )))),
+            ))],
+        };
+
+        assert_eq!(expected, ast);
     }
 }

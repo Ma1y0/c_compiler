@@ -21,6 +21,7 @@
 	  rustc
 	  rustfmt
 	  clippy
+	  rust-analyzer
         ];
         shellHook = ''
           exec zsh

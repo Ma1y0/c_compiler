@@ -21,12 +21,12 @@ pub enum Token {
     Colon,      // :
 
     // Operators
-    Plus,      // +
-    Minus,     // -
-    Asterix,   // *
-    Slash,     // /
-    Assignmen, // =
-    Equal,     // ==
+    Plus,       // +
+    Minus,      // -
+    Asterix,    // *
+    Slash,      // /
+    Assignment, // =
+    Equal,      // ==
 
     // Utils
     Error(String),

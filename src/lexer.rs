@@ -73,7 +73,7 @@ impl<'a> Lexer<'a> {
                     self.buffer.next(); // Consume the second `=`
                     Token::Equal
                 } else {
-                    Token::Assignmen
+                    Token::Assignment
                 }
             }
 
@@ -291,7 +291,7 @@ mod tests {
 
         assert_eq!(lexer.next_token(), Token::Int);
         assert_eq!(lexer.next_token(), Token::Identifier("x".to_string()));
-        assert_eq!(lexer.next_token(), Token::Assignmen);
+        assert_eq!(lexer.next_token(), Token::Assignment);
         assert_eq!(lexer.next_token(), Token::IntegerLiteral(5));
         assert_eq!(lexer.next_token(), Token::Equal);
         assert_eq!(lexer.next_token(), Token::IntegerLiteral(5));
